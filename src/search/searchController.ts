@@ -38,6 +38,17 @@ export class SearchController {
     void this.execute(this.store.getState().center);
   }
 
+  cancelForUserInteraction(): void {
+    this.cancelPending();
+    this.store.update({
+      convenienceSearch: {
+        ...this.store.getState().convenienceSearch,
+        status: 'idle',
+        message: '地図の操作完了を待っています',
+      },
+    });
+  }
+
   private cancelPending(): void {
     if (this.debounceTimer !== null)
       globalThis.clearTimeout(this.debounceTimer);

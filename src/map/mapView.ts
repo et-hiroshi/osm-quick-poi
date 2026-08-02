@@ -10,19 +10,20 @@ import type { Coordinates, LocationReading } from '../types/location';
 import { conveniencePoiKey, type ConveniencePoi } from '../types/convenience';
 import { getAccuracyVisual } from './accuracyVisual';
 import {
-  bindViewportChangeEvents,
   readMapViewport,
+  preserveViewportDuringResize,
   resolveTargetZoom,
   type MapViewport,
 } from './mapState';
+import { bindUserMapInteractionEvents } from './userMapInteraction';
 
 interface MapViewOptions {
   center: Coordinates;
   zoom: number;
   tileUrl: string;
   attribution: string;
-  minimumCenterChangeMeters: number;
-  onCenterChange: (center: Coordinates, zoom: number) => void;
+  onUserInteractionStart: () => void;
+  onUserViewportChange: (center: Coordinates, zoom: number) => void;
   onTileError: () => void;
 }
 
@@ -34,6 +35,7 @@ export class MapView {
   private readonly convenienceLayer: LayerGroup;
   private readonly convenienceMarkers = new Map<string, CircleMarker>();
   private selectedPoiKey: string | null = null;
+  private programmaticMove = false;
 
   constructor(element: HTMLElement, options: MapViewOptions) {
     this.map = L.map(element, {
@@ -57,25 +59,29 @@ export class MapView {
     this.convenienceLayer = L.layerGroup().addTo(this.map);
 
     this.tiles.on('tileerror', options.onTileError);
-    bindViewportChangeEvents(
-      this.map,
-      { center: options.center, zoom: options.zoom },
-      options.minimumCenterChangeMeters,
-      (viewport) => options.onCenterChange(viewport.center, viewport.zoom),
-    );
+    bindUserMapInteractionEvents(this.map, {
+      isProgrammaticMove: () => this.programmaticMove,
+      onUserInteractionStart: options.onUserInteractionStart,
+      onUserInteractionEnd: (viewport) =>
+        options.onUserViewportChange(viewport.center, viewport.zoom),
+    });
 
     // Safariの表示領域変化後も、Leafletの中心とCSS中央を同じ寸法で計算する。
     this.resizeObserver = new ResizeObserver(() => {
-      this.map.invalidateSize({ pan: false });
+      this.runProgrammaticMove(() => {
+        preserveViewportDuringResize(this.map);
+      });
     });
     this.resizeObserver.observe(element);
   }
 
   moveTo(center: Coordinates, zoom?: number): MapViewport {
-    this.map.setView(
-      [center.latitude, center.longitude],
-      resolveTargetZoom(this.map.getZoom(), zoom),
-    );
+    this.runProgrammaticMove(() => {
+      this.map.setView(
+        [center.latitude, center.longitude],
+        resolveTargetZoom(this.map.getZoom(), zoom),
+      );
+    });
     return readMapViewport(this.map);
   }
 
@@ -134,6 +140,15 @@ export class MapView {
     if (!marker) return;
     this.selectedPoiKey = key;
     marker.setStyle(convenienceMarkerStyle(true)).bringToFront().openPopup();
+  }
+
+  private runProgrammaticMove(action: () => void): void {
+    this.programmaticMove = true;
+    try {
+      action();
+    } finally {
+      this.programmaticMove = false;
+    }
   }
 }
 

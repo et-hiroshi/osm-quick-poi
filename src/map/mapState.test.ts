@@ -1,41 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  bindViewportChangeEvents,
+  preserveViewportDuringResize,
   readMapViewport,
   resolveTargetZoom,
-  type MapViewport,
 } from './mapState';
 
-class FakeMap {
-  center = { lat: 33.590355, lng: 130.401716 };
-  zoom = 18;
-  private readonly handlers = new Map<string, Array<() => void>>();
-
-  getCenter() {
-    return this.center;
-  }
-
-  getZoom() {
-    return this.zoom;
-  }
-
-  on(event: 'moveend' | 'zoomend', handler: () => void) {
-    const handlers = this.handlers.get(event) ?? [];
-    handlers.push(handler);
-    this.handlers.set(event, handlers);
-  }
-
-  emit(event: 'moveend' | 'zoomend') {
-    this.handlers.get(event)?.forEach((handler) => handler());
-  }
-}
-
-const initialViewport: MapViewport = {
-  center: { latitude: 33.590355, longitude: 130.401716 },
-  zoom: 18,
-};
-
-describe('readMapViewport', () => {
+describe('map state', () => {
   it('uses the post-operation map center and zoom as its only source', () => {
     const getCenter = vi.fn(() => ({ lat: 33.590355, lng: 130.401716 }));
     const getZoom = vi.fn(() => 18);
@@ -53,42 +23,26 @@ describe('readMapViewport', () => {
     expect(resolveTargetZoom(17, 19)).toBe(19);
   });
 
-  it('notifies once for a moveend-only pan', () => {
-    const map = new FakeMap();
-    const onChange = vi.fn();
-    bindViewportChangeEvents(map, initialViewport, 1, onChange);
-    map.center = { lat: 33.591, lng: 130.401716 };
-    map.emit('moveend');
-    expect(onChange).toHaveBeenCalledOnce();
-  });
+  it('restores the exact center after invalidateSize changes it', () => {
+    let center = { lat: 33.590355, lng: 130.401716 };
+    let zoom = 18;
+    const map = {
+      getCenter: () => center,
+      getZoom: () => zoom,
+      invalidateSize: vi.fn(() => {
+        center = { lat: 33.590365, lng: 130.401726 };
+      }),
+      setView: vi.fn((target: [number, number], targetZoom: number) => {
+        center = { lat: target[0], lng: target[1] };
+        zoom = targetZoom;
+      }),
+    };
 
-  it('notifies once for a zoomend-only zoom', () => {
-    const map = new FakeMap();
-    const onChange = vi.fn();
-    bindViewportChangeEvents(map, initialViewport, 1, onChange);
-    map.zoom = 19;
-    map.emit('zoomend');
-    expect(onChange).toHaveBeenCalledOnce();
-  });
-
-  it('coalesces zoomend and moveend for the same final viewport', () => {
-    const map = new FakeMap();
-    const onChange = vi.fn();
-    bindViewportChangeEvents(map, initialViewport, 1, onChange);
-    map.zoom = 19;
-    map.emit('zoomend');
-    map.emit('moveend');
-    expect(onChange).toHaveBeenCalledOnce();
-  });
-
-  it('ignores repeated internal moveend events without a meaningful viewport change', () => {
-    const map = new FakeMap();
-    const onChange = vi.fn();
-    bindViewportChangeEvents(map, initialViewport, 1, onChange);
-    map.emit('moveend');
-    map.center = { lat: 33.590356, lng: 130.401716 };
-    map.emit('moveend');
-    map.emit('moveend');
-    expect(onChange).not.toHaveBeenCalled();
+    const before = preserveViewportDuringResize(map);
+    expect(readMapViewport(map)).toEqual(before);
+    expect(map.invalidateSize).toHaveBeenCalledWith({ pan: false });
+    expect(map.setView).toHaveBeenCalledWith([33.590355, 130.401716], 18, {
+      animate: false,
+    });
   });
 });

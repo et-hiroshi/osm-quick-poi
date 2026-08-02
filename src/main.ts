@@ -1,5 +1,6 @@
 import './styles.css';
 import { AppStore } from './app/appState';
+import { applyLocationReading } from './app/applyLocationReading';
 import { APP_CONFIG } from './config/appConfig';
 import { createAppShell } from './components/appShell';
 import {
@@ -38,9 +39,8 @@ const map = new MapView(elements.map, {
   zoom: store.getState().zoom,
   tileUrl: APP_CONFIG.tileUrl,
   attribution: APP_CONFIG.attribution,
-  minimumCenterChangeMeters:
-    APP_CONFIG.convenienceSearch.minimumCenterChangeMeters,
-  onCenterChange: (center, zoom) => {
+  onUserInteractionStart: () => searchController?.cancelForUserInteraction(),
+  onUserViewportChange: (center, zoom) => {
     store.update({ center, zoom });
     searchController?.schedule(center);
   },
@@ -71,10 +71,9 @@ const controller = new LocationController(
   () =>
     getCurrentLocation(navigator.geolocation, APP_CONFIG.geolocationOptions),
   (reading, targetZoom) => {
-    map.showLocationAccuracy(reading);
-    const viewport = map.moveTo(reading.coordinates, targetZoom);
-    store.update({ center: viewport.center, zoom: viewport.zoom });
-    searchController?.schedule(viewport.center);
+    applyLocationReading(reading, targetZoom, map, store, (center) =>
+      searchController?.schedule(center),
+    );
   },
   locationErrorMessage,
 );

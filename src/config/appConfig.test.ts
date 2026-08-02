@@ -10,7 +10,6 @@ describe('APP_CONFIG', () => {
     expect(APP_CONFIG.convenienceSearch).toMatchObject({
       radiusMeters: 50,
       debounceMilliseconds: 900,
-      minimumCenterChangeMeters: 1,
     });
     expect(APP_CONFIG.convenienceSearch.endpoint).toMatch(/^https:/);
   });

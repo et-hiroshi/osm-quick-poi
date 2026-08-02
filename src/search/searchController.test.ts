@@ -64,8 +64,9 @@ describe('SearchController', () => {
   it('debounces repeated map updates and searches only the latest center', async () => {
     vi.useFakeTimers();
     const service: ConvenienceSearchService = { search: vi.fn(async () => []) };
+    const store = createStore();
     const controller = new SearchController(
-      createStore(),
+      store,
       service,
       50,
       900,
@@ -76,6 +77,11 @@ describe('SearchController', () => {
 
     controller.schedule(initialCenter);
     await vi.advanceTimersByTimeAsync(600);
+    controller.cancelForUserInteraction();
+    expect(store.getState().convenienceSearch).toMatchObject({
+      status: 'idle',
+      message: '地図の操作完了を待っています',
+    });
     controller.schedule(latestCenter);
     await vi.advanceTimersByTimeAsync(899);
     expect(service.search).not.toHaveBeenCalled();

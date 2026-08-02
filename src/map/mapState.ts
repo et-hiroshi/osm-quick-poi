@@ -1,5 +1,4 @@
 import type { Coordinates } from '../types/location';
-import { distanceMeters } from '../search/distance';
 
 export interface MapViewport {
   center: Coordinates;
@@ -11,29 +10,13 @@ interface MapStateSource {
   getZoom(): number;
 }
 
-interface MapEventSource extends MapStateSource {
-  on(event: 'moveend' | 'zoomend', handler: () => void): unknown;
-}
-
-export function bindViewportChangeEvents(
-  map: MapEventSource,
-  initialViewport: MapViewport,
-  minimumCenterChangeMeters: number,
-  onChange: (viewport: MapViewport) => void,
-): void {
-  let lastViewport = initialViewport;
-  const notifyIfChanged = () => {
-    const viewport = readMapViewport(map);
-    const centerChanged =
-      distanceMeters(lastViewport.center, viewport.center) >=
-      minimumCenterChangeMeters;
-    if (!centerChanged && viewport.zoom === lastViewport.zoom) return;
-    lastViewport = viewport;
-    onChange(viewport);
-  };
-
-  map.on('moveend', notifyIfChanged);
-  map.on('zoomend', notifyIfChanged);
+interface ResizableMap extends MapStateSource {
+  invalidateSize(options: { pan: false }): unknown;
+  setView(
+    center: [number, number],
+    zoom: number,
+    options: { animate: false },
+  ): unknown;
 }
 
 export function readMapViewport(map: MapStateSource): MapViewport {
@@ -42,6 +25,17 @@ export function readMapViewport(map: MapStateSource): MapViewport {
     center: { latitude: center.lat, longitude: center.lng },
     zoom: map.getZoom(),
   };
+}
+
+export function preserveViewportDuringResize(map: ResizableMap): MapViewport {
+  const viewport = readMapViewport(map);
+  map.invalidateSize({ pan: false });
+  map.setView(
+    [viewport.center.latitude, viewport.center.longitude],
+    viewport.zoom,
+    { animate: false },
+  );
+  return viewport;
 }
 
 export function resolveTargetZoom(
