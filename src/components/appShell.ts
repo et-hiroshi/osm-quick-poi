@@ -15,7 +15,10 @@ export function createAppShell(
     <section class="app-shell" aria-label="OSM Quick POI">
       <div class="map-wrap">
         <div id="map" aria-label="OpenStreetMap 地図"></div>
-        <div class="center-pin" aria-hidden="true"><span></span></div>
+        <div class="center-target" aria-hidden="true">
+          <span class="pin-marker"></span>
+          <span class="center-crosshair"></span>
+        </div>
         <div class="map-status" role="status" aria-live="polite">
           <span id="location-status">最終測位精度 未取得</span>
         </div>
@@ -25,7 +28,10 @@ export function createAppShell(
         <div id="system-message" class="system-message" role="status" aria-live="polite" hidden></div>
       </div>
       <section class="coordinate-panel" aria-labelledby="coordinate-title">
-        <span id="coordinate-title">登録予定位置</span>
+        <div class="coordinate-heading">
+          <span id="coordinate-title">登録予定位置</span>
+          <span class="zoom-detail" data-development-detail>ズーム <output id="zoom-level">--</output></span>
+        </div>
         <output id="coordinates">--</output>
         <p id="location-message" class="location-message" role="status" aria-live="polite"></p>
       </section>
@@ -38,6 +44,7 @@ export function createAppShell(
   );
   const systemMessage = requiredElement<HTMLElement>(root, '#system-message');
   const coordinates = requiredElement<HTMLOutputElement>(root, '#coordinates');
+  const zoomLevel = requiredElement<HTMLOutputElement>(root, '#zoom-level');
   const accuracy = requiredElement<HTMLElement>(root, '#location-status');
   const locationMessage = requiredElement<HTMLElement>(
     root,
@@ -45,7 +52,14 @@ export function createAppShell(
   );
 
   store.subscribe((state) =>
-    render(state, locateButton, coordinates, accuracy, locationMessage),
+    render(
+      state,
+      locateButton,
+      coordinates,
+      zoomLevel,
+      accuracy,
+      locationMessage,
+    ),
   );
   return { map, locateButton, systemMessage };
 }
@@ -54,10 +68,12 @@ function render(
   state: Readonly<AppState>,
   button: HTMLButtonElement,
   coordinates: HTMLOutputElement,
+  zoomLevel: HTMLOutputElement,
   accuracy: HTMLElement,
   message: HTMLElement,
 ): void {
   coordinates.value = formatCoordinates(state.center);
+  zoomLevel.value = String(state.zoom);
   accuracy.textContent = formatAccuracy(state.location);
   message.textContent = state.locationMessage;
   message.dataset.status = state.locationStatus;

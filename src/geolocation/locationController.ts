@@ -2,7 +2,7 @@ import type { AppStore } from '../app/appState';
 import type { LocationReading } from '../types/location';
 
 export type Locate = () => Promise<LocationReading>;
-export type MoveMap = (reading: LocationReading) => void;
+export type MoveMap = (reading: LocationReading, targetZoom?: number) => void;
 
 export class LocationController {
   private locating = false;
@@ -14,7 +14,7 @@ export class LocationController {
     private readonly errorMessage: (error: unknown) => string,
   ) {}
 
-  async request(): Promise<void> {
+  async request(targetZoom?: number): Promise<void> {
     if (this.locating) return;
     this.locating = true;
     this.store.update({
@@ -24,9 +24,8 @@ export class LocationController {
 
     try {
       const reading = await this.locate();
-      this.moveMap(reading);
+      this.moveMap(reading, targetZoom);
       this.store.update({
-        center: reading.coordinates,
         location: reading,
         locationStatus: 'success',
         locationMessage: '現在地を取得しました',

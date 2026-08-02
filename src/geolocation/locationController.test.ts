@@ -20,7 +20,7 @@ const reading: LocationReading = {
 };
 
 describe('LocationController', () => {
-  it('updates location and moves the map on success', async () => {
+  it('uses the requested default zoom for initial location', async () => {
     const appStore = store();
     const moveMap = vi.fn();
     await new LocationController(
@@ -28,13 +28,28 @@ describe('LocationController', () => {
       async () => reading,
       moveMap,
       () => 'error',
-    ).request();
-    expect(moveMap).toHaveBeenCalledWith(reading);
+    ).request(19);
+    expect(moveMap).toHaveBeenCalledWith(reading, 19);
     expect(appStore.getState()).toMatchObject({
-      center: reading.coordinates,
+      center: { latitude: 35, longitude: 139 },
+      zoom: 14,
       location: reading,
       locationStatus: 'success',
     });
+  });
+
+  it('leaves zoom selection to the map when recentering', async () => {
+    const appStore = store();
+    appStore.update({ zoom: 17 });
+    const moveMap = vi.fn();
+    await new LocationController(
+      appStore,
+      async () => reading,
+      moveMap,
+      () => 'error',
+    ).request();
+    expect(moveMap).toHaveBeenCalledWith(reading, undefined);
+    expect(appStore.getState().zoom).toBe(17);
   });
 
   it('preserves center and zoom on failure', async () => {

@@ -42,7 +42,7 @@ const controller = new LocationController(
   store,
   () =>
     getCurrentLocation(navigator.geolocation, APP_CONFIG.geolocationOptions),
-  (reading) => map.moveTo(reading.coordinates, APP_CONFIG.locationZoom),
+  (reading, targetZoom) => map.moveTo(reading.coordinates, targetZoom),
   locationErrorMessage,
 );
 
@@ -50,7 +50,7 @@ elements.locateButton.addEventListener(
   'click',
   () => void controller.request(),
 );
-void controller.request();
+void controller.request(APP_CONFIG.locationZoom);
 void registerServiceWorker(() => {
   elements.systemMessage.hidden = false;
   elements.systemMessage.textContent =

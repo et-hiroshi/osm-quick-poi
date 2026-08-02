@@ -43,37 +43,74 @@ button {
   touch-action: none;
 }
 
-.center-pin {
+.center-target {
   position: absolute;
   z-index: 800;
   top: 50%;
   left: 50%;
-  width: 40px;
-  height: 52px;
-  transform: translate(-50%, -100%);
+  width: 0;
+  height: 0;
   pointer-events: none;
-  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 35%));
 }
-.center-pin span {
+.pin-marker {
   position: absolute;
-  top: 2px;
-  left: 6px;
-  width: 28px;
-  height: 28px;
-  border: 4px solid white;
-  border-radius: 50% 50% 50% 0;
-  background: #cf2e2e;
-  transform: rotate(-45deg);
+  bottom: 0;
+  left: -17px;
+  width: 34px;
+  height: 44px;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 40%));
 }
-.center-pin span::after {
+.pin-marker::before {
   content: '';
   position: absolute;
-  width: 7px;
-  height: 7px;
-  top: 7px;
-  left: 7px;
+  top: 0;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border: 4px solid white;
   border-radius: 50%;
-  background: white;
+  background: radial-gradient(circle, white 0 4px, #c92828 5px);
+}
+.pin-marker::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  width: 0;
+  height: 0;
+  border-right: 9px solid transparent;
+  border-left: 9px solid transparent;
+  border-top: 18px solid #c92828;
+}
+.center-crosshair {
+  position: absolute;
+  z-index: -1;
+  top: -9px;
+  left: -9px;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgb(18 59 42 / 70%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 75%);
+}
+.center-crosshair::before,
+.center-crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgb(18 59 42 / 75%);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 55%);
+}
+.center-crosshair::before {
+  top: 8px;
+  left: -5px;
+  width: 26px;
+  height: 1px;
+}
+.center-crosshair::after {
+  top: -5px;
+  left: 8px;
+  width: 1px;
+  height: 26px;
 }
 
 .map-status,
@@ -89,10 +126,10 @@ button {
   font-weight: 650;
 }
 .map-status {
-  bottom: 14px;
+  bottom: 43px;
 }
 .system-message {
-  top: 12px;
+  top: 42px;
   right: 12px;
   color: #702018;
 }
@@ -131,11 +168,20 @@ button {
   border-top: 1px solid #c8d0ca;
   background: #fff;
 }
-.coordinate-panel > span {
-  display: block;
+.coordinate-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.coordinate-heading > span {
   color: #526058;
   font-size: 0.76rem;
   font-weight: 700;
+}
+.zoom-detail {
+  white-space: nowrap;
+  font-weight: 600 !important;
 }
 .coordinate-panel output {
   display: block;
@@ -171,6 +217,12 @@ button {
 }
 .leaflet-control-attribution {
   font-size: 10px;
+}
+.leaflet-control-scale-line {
+  border-color: #123b2a;
+  background: rgb(255 255 255 / 85%);
+  color: #17211c;
+  font-weight: 700;
 }
 
 @media (max-width: 359px) {
