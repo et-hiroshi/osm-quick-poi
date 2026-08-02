@@ -17,9 +17,14 @@ interface OverpassResponse {
 
 export type Fetcher = typeof fetch;
 
+export type OverpassErrorKind =
+  'busy' | 'bad-request' | 'timeout' | 'network' | 'invalid-json' | 'http';
+
 export class OverpassError extends Error {
   constructor(
-    public readonly kind: 'network' | 'http' | 'timeout' | 'invalid',
+    public readonly kind: OverpassErrorKind,
+    public readonly endpoint: string | null = null,
+    public readonly status: number | null = null,
   ) {
     super(kind);
   }
@@ -35,16 +40,48 @@ export interface ConvenienceSearchService {
 
 export class OverpassClient implements ConvenienceSearchService {
   constructor(
-    private readonly endpoint: string,
+    private readonly endpoints: readonly string[],
     private readonly timeoutMilliseconds: number,
     private readonly fetcher: Fetcher = fetch,
-  ) {}
+  ) {
+    if (endpoints.length === 0)
+      throw new Error('At least one Overpass endpoint is required');
+  }
 
   async search(
     center: Coordinates,
     radiusMeters: number,
     externalSignal: AbortSignal,
   ): Promise<ConveniencePoi[]> {
+    let lastError: unknown;
+    for (let index = 0; index < this.endpoints.length; index += 1) {
+      const endpoint = this.endpoints[index];
+      try {
+        return await this.requestEndpoint(
+          endpoint,
+          center,
+          radiusMeters,
+          externalSignal,
+        );
+      } catch (error) {
+        if (externalSignal.aborted) throw error;
+        lastError = error;
+        const hasFallback = index + 1 < this.endpoints.length;
+        if (!hasFallback || !isFallbackEligible(error)) throw error;
+      }
+    }
+    throw lastError;
+  }
+
+  private async requestEndpoint(
+    endpoint: string,
+    center: Coordinates,
+    radiusMeters: number,
+    externalSignal: AbortSignal,
+  ): Promise<ConveniencePoi[]> {
+    if (externalSignal.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
     const controller = new AbortController();
     let timedOut = false;
     const abort = () => controller.abort();
@@ -56,30 +93,27 @@ export class OverpassClient implements ConvenienceSearchService {
     }, this.timeoutMilliseconds);
 
     try {
-      const response = await this.fetcher(this.endpoint, {
+      const response = await this.fetcher(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        },
         body: new URLSearchParams({
           data: buildConvenienceQuery(center, radiusMeters),
         }),
         signal: controller.signal,
       });
-      if (!response.ok) throw new OverpassError('http');
+      if (!response.ok) throw httpError(endpoint, response.status);
 
       let payload: unknown;
       try {
         payload = await response.json();
       } catch {
-        throw new OverpassError('invalid');
+        throw new OverpassError('invalid-json', endpoint, response.status);
       }
       return parseConvenienceResponse(payload, center);
     } catch (error) {
-      if (timedOut) throw new OverpassError('timeout');
+      if (timedOut) throw new OverpassError('timeout', endpoint);
       if (externalSignal.aborted) throw error;
       if (error instanceof OverpassError) throw error;
-      throw new OverpassError('network');
+      throw new OverpassError('network', endpoint);
     } finally {
       globalThis.clearTimeout(timeout);
       externalSignal.removeEventListener('abort', abort);
@@ -99,7 +133,7 @@ export function parseConvenienceResponse(
   payload: unknown,
   searchCenter: Coordinates,
 ): ConveniencePoi[] {
-  if (!isResponse(payload)) throw new OverpassError('invalid');
+  if (!isResponse(payload)) throw new OverpassError('invalid-json');
 
   return payload.elements
     .map((element) => toConveniencePoi(element, searchCenter))
@@ -112,15 +146,34 @@ export function overpassErrorMessage(error: unknown): string {
     return '周辺検索に失敗しました。もう一度お試しください。';
   }
   switch (error.kind) {
+    case 'busy':
+      return '検索サービスが混雑しています。しばらくしてから再試行してください。';
+    case 'bad-request':
+      return '検索要求が不正です。地図を少し動かして再試行してください。';
     case 'timeout':
-      return '周辺検索が時間切れになりました。しばらくしてから再試行してください。';
+      return '検索がタイムアウトしました。しばらくしてから再試行してください。';
     case 'http':
       return '周辺検索サービスが応答できませんでした。しばらくしてから再試行してください。';
-    case 'invalid':
+    case 'invalid-json':
       return '周辺検索の応答を読み取れませんでした。もう一度お試しください。';
     case 'network':
-      return '通信できないため周辺を検索できませんでした。接続をご確認ください。';
+      return '検索サービスへ接続できません。しばらくしてから再試行してください。';
   }
+}
+
+function isFallbackEligible(error: unknown): boolean {
+  return (
+    error instanceof OverpassError &&
+    (error.kind === 'busy' || error.kind === 'timeout')
+  );
+}
+
+function httpError(endpoint: string, status: number): OverpassError {
+  if (status === 400) return new OverpassError('bad-request', endpoint, status);
+  if ([429, 502, 503, 504].includes(status)) {
+    return new OverpassError('busy', endpoint, status);
+  }
+  return new OverpassError('http', endpoint, status);
 }
 
 function isResponse(

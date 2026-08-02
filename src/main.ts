@@ -54,7 +54,7 @@ const map = new MapView(elements.map, {
 });
 
 const overpassClient = new OverpassClient(
-  APP_CONFIG.convenienceSearch.endpoint,
+  APP_CONFIG.convenienceSearch.endpoints,
   APP_CONFIG.convenienceSearch.timeoutMilliseconds,
 );
 searchController = new SearchController(

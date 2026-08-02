@@ -11,6 +11,9 @@ describe('APP_CONFIG', () => {
       radiusMeters: 50,
       debounceMilliseconds: 900,
     });
-    expect(APP_CONFIG.convenienceSearch.endpoint).toMatch(/^https:/);
+    expect(APP_CONFIG.convenienceSearch.endpoints).toHaveLength(2);
+    APP_CONFIG.convenienceSearch.endpoints.forEach((endpoint) =>
+      expect(endpoint).toMatch(/^https:/),
+    );
   });
 });

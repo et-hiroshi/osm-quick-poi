@@ -12,7 +12,10 @@ export const APP_CONFIG = {
     maximumAge: 0,
   } satisfies PositionOptions,
   convenienceSearch: {
-    endpoint: 'https://overpass-api.de/api/interpreter',
+    endpoints: [
+      'https://overpass-api.de/api/interpreter',
+      'https://lz4.overpass-api.de/api/interpreter',
+    ],
     radiusMeters: 50,
     debounceMilliseconds: 900,
     timeoutMilliseconds: 12_000,
