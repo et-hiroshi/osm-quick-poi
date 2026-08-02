@@ -16,11 +16,11 @@ export function createAppShell(
       <div class="map-wrap">
         <div id="map" aria-label="OpenStreetMap 地図"></div>
         <div class="center-target" aria-hidden="true">
-          <span class="pin-marker"></span>
+          <svg class="pin-marker" viewBox="0 0 28 38">
+            <path d="M14 1C6.8 1 1 6.8 1 14c0 9.7 13 23 13 23s13-13.3 13-23C27 6.8 21.2 1 14 1Z" />
+            <circle cx="14" cy="14" r="4" />
+          </svg>
           <span class="center-crosshair"></span>
-        </div>
-        <div class="map-status" role="status" aria-live="polite">
-          <span id="location-status">最終測位精度 未取得</span>
         </div>
         <button id="locate-button" class="locate-button" type="button">
           <span aria-hidden="true">◎</span><span>現在地</span>
@@ -33,6 +33,7 @@ export function createAppShell(
           <span class="zoom-detail" data-development-detail>ズーム <output id="zoom-level">--</output></span>
         </div>
         <output id="coordinates">--</output>
+        <span id="location-status" class="visually-hidden" aria-live="polite">最終測位精度 未取得</span>
         <p id="location-message" class="location-message" role="status" aria-live="polite"></p>
       </section>
     </section>`;

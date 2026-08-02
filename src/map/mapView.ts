@@ -1,6 +1,11 @@
-import L, { type Map as LeafletMap, type TileLayer } from 'leaflet';
+import L, {
+  type Circle,
+  type Map as LeafletMap,
+  type TileLayer,
+} from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { Coordinates } from '../types/location';
+import type { Coordinates, LocationReading } from '../types/location';
+import { getAccuracyVisual } from './accuracyVisual';
 import { readMapViewport, resolveTargetZoom } from './mapState';
 
 interface MapViewOptions {
@@ -16,6 +21,7 @@ export class MapView {
   private readonly map: LeafletMap;
   private readonly tiles: TileLayer;
   private readonly resizeObserver: ResizeObserver;
+  private accuracyCircle: Circle | null = null;
 
   constructor(element: HTMLElement, options: MapViewOptions) {
     this.map = L.map(element, {
@@ -56,5 +62,32 @@ export class MapView {
       [center.latitude, center.longitude],
       resolveTargetZoom(this.map.getZoom(), zoom),
     );
+  }
+
+  showLocationAccuracy(reading: LocationReading): void {
+    const visual = getAccuracyVisual(reading.accuracy);
+    const latLng: L.LatLngExpression = [
+      reading.coordinates.latitude,
+      reading.coordinates.longitude,
+    ];
+    const pathOptions = {
+      fillColor: visual.fillColor,
+      fillOpacity: visual.fillOpacity,
+      stroke: false,
+    };
+
+    if (this.accuracyCircle) {
+      this.accuracyCircle
+        .setLatLng(latLng)
+        .setRadius(visual.radius)
+        .setStyle(pathOptions);
+      return;
+    }
+
+    this.accuracyCircle = L.circle(latLng, {
+      ...pathOptions,
+      radius: visual.radius,
+      interactive: false,
+    }).addTo(this.map);
   }
 }

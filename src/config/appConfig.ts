@@ -12,3 +12,8 @@ export const APP_CONFIG = {
     maximumAge: 0,
   } satisfies PositionOptions,
 } as const;
+
+export const ACCURACY_VISUAL_CONFIG = {
+  fill: '#0f4d3a',
+  fillOpacity: 0.2,
+} as const;

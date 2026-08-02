@@ -42,7 +42,10 @@ const controller = new LocationController(
   store,
   () =>
     getCurrentLocation(navigator.geolocation, APP_CONFIG.geolocationOptions),
-  (reading, targetZoom) => map.moveTo(reading.coordinates, targetZoom),
+  (reading, targetZoom) => {
+    map.showLocationAccuracy(reading);
+    map.moveTo(reading.coordinates, targetZoom);
+  },
   locationErrorMessage,
 );
 
