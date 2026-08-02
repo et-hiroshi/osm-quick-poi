@@ -9,13 +9,19 @@ import 'leaflet/dist/leaflet.css';
 import type { Coordinates, LocationReading } from '../types/location';
 import { conveniencePoiKey, type ConveniencePoi } from '../types/convenience';
 import { getAccuracyVisual } from './accuracyVisual';
-import { readMapViewport, resolveTargetZoom } from './mapState';
+import {
+  bindViewportChangeEvents,
+  readMapViewport,
+  resolveTargetZoom,
+  type MapViewport,
+} from './mapState';
 
 interface MapViewOptions {
   center: Coordinates;
   zoom: number;
   tileUrl: string;
   attribution: string;
+  minimumCenterChangeMeters: number;
   onCenterChange: (center: Coordinates, zoom: number) => void;
   onTileError: () => void;
 }
@@ -51,11 +57,12 @@ export class MapView {
     this.convenienceLayer = L.layerGroup().addTo(this.map);
 
     this.tiles.on('tileerror', options.onTileError);
-    const updateCenter = () => {
-      const viewport = readMapViewport(this.map);
-      options.onCenterChange(viewport.center, viewport.zoom);
-    };
-    this.map.on('moveend zoomend', updateCenter);
+    bindViewportChangeEvents(
+      this.map,
+      { center: options.center, zoom: options.zoom },
+      options.minimumCenterChangeMeters,
+      (viewport) => options.onCenterChange(viewport.center, viewport.zoom),
+    );
 
     // Safariの表示領域変化後も、Leafletの中心とCSS中央を同じ寸法で計算する。
     this.resizeObserver = new ResizeObserver(() => {
@@ -64,11 +71,12 @@ export class MapView {
     this.resizeObserver.observe(element);
   }
 
-  moveTo(center: Coordinates, zoom?: number): void {
+  moveTo(center: Coordinates, zoom?: number): MapViewport {
     this.map.setView(
       [center.latitude, center.longitude],
       resolveTargetZoom(this.map.getZoom(), zoom),
     );
+    return readMapViewport(this.map);
   }
 
   showLocationAccuracy(reading: LocationReading): void {

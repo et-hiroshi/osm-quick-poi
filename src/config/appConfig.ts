@@ -16,6 +16,7 @@ export const APP_CONFIG = {
     radiusMeters: 50,
     debounceMilliseconds: 900,
     timeoutMilliseconds: 12_000,
+    minimumCenterChangeMeters: 1,
   },
 } as const;
 

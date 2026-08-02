@@ -38,6 +38,8 @@ const map = new MapView(elements.map, {
   zoom: store.getState().zoom,
   tileUrl: APP_CONFIG.tileUrl,
   attribution: APP_CONFIG.attribution,
+  minimumCenterChangeMeters:
+    APP_CONFIG.convenienceSearch.minimumCenterChangeMeters,
   onCenterChange: (center, zoom) => {
     store.update({ center, zoom });
     searchController?.schedule(center);
@@ -70,7 +72,9 @@ const controller = new LocationController(
     getCurrentLocation(navigator.geolocation, APP_CONFIG.geolocationOptions),
   (reading, targetZoom) => {
     map.showLocationAccuracy(reading);
-    map.moveTo(reading.coordinates, targetZoom);
+    const viewport = map.moveTo(reading.coordinates, targetZoom);
+    store.update({ center: viewport.center, zoom: viewport.zoom });
+    searchController?.schedule(viewport.center);
   },
   locationErrorMessage,
 );

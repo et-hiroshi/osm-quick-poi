@@ -38,6 +38,29 @@ function poi(id: number): ConveniencePoi {
 afterEach(() => vi.useRealTimers());
 
 describe('SearchController', () => {
+  it('always advances from debouncing to loading after the delay', async () => {
+    vi.useFakeTimers();
+    const service: ConvenienceSearchService = {
+      search: vi.fn(() => new Promise<ConveniencePoi[]>(() => undefined)),
+    };
+    const store = createStore();
+    const controller = new SearchController(
+      store,
+      service,
+      50,
+      900,
+      () => 'error',
+      vi.fn(),
+    );
+
+    controller.schedule(initialCenter);
+    expect(store.getState().convenienceSearch.status).toBe('debouncing');
+    await vi.advanceTimersByTimeAsync(899);
+    expect(store.getState().convenienceSearch.status).toBe('debouncing');
+    await vi.advanceTimersByTimeAsync(1);
+    expect(store.getState().convenienceSearch.status).toBe('loading');
+  });
+
   it('debounces repeated map updates and searches only the latest center', async () => {
     vi.useFakeTimers();
     const service: ConvenienceSearchService = { search: vi.fn(async () => []) };
@@ -131,6 +154,30 @@ describe('SearchController', () => {
         status: 'error',
         message: '周辺検索に失敗しました',
       },
+    });
+  });
+
+  it('reaches the explicit zero-results success state', async () => {
+    vi.useFakeTimers();
+    const store = createStore();
+    const service: ConvenienceSearchService = {
+      search: vi.fn(async () => []),
+    };
+    const controller = new SearchController(
+      store,
+      service,
+      50,
+      900,
+      () => 'error',
+      vi.fn(),
+    );
+    controller.schedule(initialCenter);
+    await vi.advanceTimersByTimeAsync(900);
+
+    expect(store.getState().convenienceSearch).toMatchObject({
+      status: 'success',
+      results: [],
+      message: '半径50m以内にコンビニ登録なし',
     });
   });
 });
