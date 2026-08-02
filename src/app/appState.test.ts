@@ -9,6 +9,13 @@ describe('AppStore', () => {
       location: null,
       locationStatus: 'idle',
       locationMessage: '',
+      convenienceSearch: {
+        status: 'idle',
+        center: null,
+        radiusMeters: 50,
+        results: [],
+        message: '未検索',
+      },
     });
     const listener = vi.fn();
     store.subscribe(listener);

@@ -11,6 +11,12 @@ export const APP_CONFIG = {
     timeout: 12_000,
     maximumAge: 0,
   } satisfies PositionOptions,
+  convenienceSearch: {
+    endpoint: 'https://overpass-api.de/api/interpreter',
+    radiusMeters: 50,
+    debounceMilliseconds: 900,
+    timeoutMilliseconds: 12_000,
+  },
 } as const;
 
 export const ACCURACY_VISUAL_CONFIG = {

@@ -1,10 +1,13 @@
 import type { AppState, AppStore } from '../app/appState';
+import { conveniencePoiKey } from '../types/convenience';
 import { formatAccuracy, formatCoordinates } from './formatters';
 
 export interface AppElements {
   map: HTMLElement;
   locateButton: HTMLButtonElement;
   systemMessage: HTMLElement;
+  retrySearchButton: HTMLButtonElement;
+  searchResults: HTMLElement;
 }
 
 export function createAppShell(
@@ -35,6 +38,14 @@ export function createAppShell(
         <output id="coordinates">--</output>
         <span id="location-status" class="visually-hidden" aria-live="polite">最終測位精度 未取得</span>
         <p id="location-message" class="location-message" role="status" aria-live="polite"></p>
+        <section class="search-panel" aria-labelledby="search-title">
+          <div class="search-heading">
+            <h2 id="search-title">周辺コンビニ</h2>
+            <button id="retry-search" class="retry-search" type="button" hidden>再試行</button>
+          </div>
+          <p id="search-message" class="search-message" role="status" aria-live="polite">未検索</p>
+          <ul id="search-results" class="search-results" aria-label="周辺コンビニ検索結果"></ul>
+        </section>
       </section>
     </section>`;
 
@@ -51,6 +62,12 @@ export function createAppShell(
     root,
     '#location-message',
   );
+  const retrySearchButton = requiredElement<HTMLButtonElement>(
+    root,
+    '#retry-search',
+  );
+  const searchResults = requiredElement<HTMLElement>(root, '#search-results');
+  const searchMessage = requiredElement<HTMLElement>(root, '#search-message');
 
   store.subscribe((state) =>
     render(
@@ -60,9 +77,18 @@ export function createAppShell(
       zoomLevel,
       accuracy,
       locationMessage,
+      searchMessage,
+      searchResults,
+      retrySearchButton,
     ),
   );
-  return { map, locateButton, systemMessage };
+  return {
+    map,
+    locateButton,
+    systemMessage,
+    retrySearchButton,
+    searchResults,
+  };
 }
 
 function render(
@@ -72,6 +98,9 @@ function render(
   zoomLevel: HTMLOutputElement,
   accuracy: HTMLElement,
   message: HTMLElement,
+  searchMessage: HTMLElement,
+  searchResults: HTMLElement,
+  retrySearchButton: HTMLButtonElement,
 ): void {
   coordinates.value = formatCoordinates(state.center);
   zoomLevel.value = String(state.zoom);
@@ -80,6 +109,48 @@ function render(
   message.dataset.status = state.locationStatus;
   button.disabled = state.locationStatus === 'locating';
   button.setAttribute('aria-busy', String(state.locationStatus === 'locating'));
+  renderConvenienceSearch(
+    state,
+    searchMessage,
+    searchResults,
+    retrySearchButton,
+  );
+}
+
+function renderConvenienceSearch(
+  state: Readonly<AppState>,
+  message: HTMLElement,
+  resultsElement: HTMLElement,
+  retryButton: HTMLButtonElement,
+): void {
+  const search = state.convenienceSearch;
+  message.textContent = search.message;
+  message.dataset.status = search.status;
+  retryButton.hidden = search.status !== 'error';
+  resultsElement.replaceChildren();
+
+  if (search.status !== 'success') return;
+  search.results.forEach((poi) => {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.poiKey = conveniencePoiKey(poi);
+    button.className = 'search-result';
+
+    const name = document.createElement('strong');
+    name.textContent = poi.name;
+    const detail = document.createElement('span');
+    detail.textContent = `ピンから${Math.round(poi.distanceMeters)}m · ${poi.osmType} ${poi.osmId}`;
+    button.append(name);
+    if (poi.brand && poi.brand !== poi.name) {
+      const brand = document.createElement('span');
+      brand.textContent = poi.brand;
+      button.append(brand);
+    }
+    button.append(detail);
+    item.append(button);
+    resultsElement.append(item);
+  });
 }
 
 function requiredElement<T extends Element>(

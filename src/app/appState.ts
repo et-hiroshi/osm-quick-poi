@@ -3,6 +3,7 @@ import type {
   LocationReading,
   LocationStatus,
 } from '../types/location';
+import type { ConvenienceSearchState } from '../types/convenience';
 
 export interface AppState {
   center: Coordinates;
@@ -10,6 +11,7 @@ export interface AppState {
   location: LocationReading | null;
   locationStatus: LocationStatus;
   locationMessage: string;
+  convenienceSearch: ConvenienceSearchState;
 }
 
 type Listener = (state: Readonly<AppState>) => void;

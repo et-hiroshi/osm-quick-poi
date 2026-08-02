@@ -1,10 +1,13 @@
 import L, {
   type Circle,
+  type CircleMarker,
+  type LayerGroup,
   type Map as LeafletMap,
   type TileLayer,
 } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Coordinates, LocationReading } from '../types/location';
+import { conveniencePoiKey, type ConveniencePoi } from '../types/convenience';
 import { getAccuracyVisual } from './accuracyVisual';
 import { readMapViewport, resolveTargetZoom } from './mapState';
 
@@ -22,6 +25,9 @@ export class MapView {
   private readonly tiles: TileLayer;
   private readonly resizeObserver: ResizeObserver;
   private accuracyCircle: Circle | null = null;
+  private readonly convenienceLayer: LayerGroup;
+  private readonly convenienceMarkers = new Map<string, CircleMarker>();
+  private selectedPoiKey: string | null = null;
 
   constructor(element: HTMLElement, options: MapViewOptions) {
     this.map = L.map(element, {
@@ -42,6 +48,7 @@ export class MapView {
     L.control
       .scale({ position: 'bottomleft', metric: true, imperial: false })
       .addTo(this.map);
+    this.convenienceLayer = L.layerGroup().addTo(this.map);
 
     this.tiles.on('tileerror', options.onTileError);
     const updateCenter = () => {
@@ -80,7 +87,8 @@ export class MapView {
       this.accuracyCircle
         .setLatLng(latLng)
         .setRadius(visual.radius)
-        .setStyle(pathOptions);
+        .setStyle(pathOptions)
+        .bringToBack();
       return;
     }
 
@@ -89,5 +97,70 @@ export class MapView {
       radius: visual.radius,
       interactive: false,
     }).addTo(this.map);
+    this.accuracyCircle.bringToBack();
   }
+
+  setConveniencePois(pois: ConveniencePoi[]): void {
+    this.convenienceLayer.clearLayers();
+    this.convenienceMarkers.clear();
+    this.selectedPoiKey = null;
+
+    pois.forEach((poi) => {
+      const marker = L.circleMarker(
+        [poi.coordinates.latitude, poi.coordinates.longitude],
+        convenienceMarkerStyle(false),
+      )
+        .bindPopup(createPoiPopup(poi), { autoPan: false })
+        .addTo(this.convenienceLayer);
+      this.convenienceMarkers.set(conveniencePoiKey(poi), marker);
+    });
+  }
+
+  selectConveniencePoi(key: string): void {
+    if (this.selectedPoiKey) {
+      this.convenienceMarkers
+        .get(this.selectedPoiKey)
+        ?.setStyle(convenienceMarkerStyle(false));
+    }
+    const marker = this.convenienceMarkers.get(key);
+    if (!marker) return;
+    this.selectedPoiKey = key;
+    marker.setStyle(convenienceMarkerStyle(true)).bringToFront().openPopup();
+  }
+}
+
+function convenienceMarkerStyle(selected: boolean): L.CircleMarkerOptions {
+  return {
+    radius: selected ? 10 : 8,
+    color: '#ffffff',
+    weight: selected ? 3 : 2,
+    fillColor: selected ? '#b56b22' : '#4d7180',
+    fillOpacity: 0.95,
+  };
+}
+
+function createPoiPopup(poi: ConveniencePoi): HTMLElement {
+  const content = document.createElement('div');
+  content.className = 'poi-popup';
+  const name = document.createElement('strong');
+  name.textContent = poi.name;
+  content.append(name);
+
+  if (poi.brand && poi.brand !== poi.name) {
+    const brand = document.createElement('span');
+    brand.textContent = poi.brand;
+    content.append(brand);
+  }
+
+  const detail = document.createElement('span');
+  detail.textContent = `ピンから${Math.round(poi.distanceMeters)}m · ${poi.osmType} ${poi.osmId}`;
+  content.append(detail);
+
+  const link = document.createElement('a');
+  link.href = `https://www.openstreetmap.org/${poi.osmType}/${poi.osmId}`;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = 'OpenStreetMapで確認';
+  content.append(link);
+  return content;
 }

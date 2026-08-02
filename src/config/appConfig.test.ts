@@ -7,5 +7,10 @@ describe('APP_CONFIG', () => {
     expect(APP_CONFIG.attribution).toContain('OpenStreetMap');
     expect(APP_CONFIG.initialZoom).toBeLessThan(APP_CONFIG.locationZoom);
     expect(APP_CONFIG.geolocationOptions.enableHighAccuracy).toBe(true);
+    expect(APP_CONFIG.convenienceSearch).toMatchObject({
+      radiusMeters: 50,
+      debounceMilliseconds: 900,
+    });
+    expect(APP_CONFIG.convenienceSearch.endpoint).toMatch(/^https:/);
   });
 });
