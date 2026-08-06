@@ -16,6 +16,6 @@
 
 下部パネルは検索状態や結果件数にかかわらず固定高です。地図コンテナのリサイズ時は変更前の中心・ズームを保存し、`invalidateSize({ pan: false })` 後に同じ値を復元するため、静止中の登録予定座標は変化しません。
 
-Overpass endpointは `src/config/appConfig.ts` の優先順リストで管理します。要求は`URLSearchParams`をbodyにしたPOSTで送り、ブラウザにCORS-safeなContent-Type設定を委ねます。HTTP 429/502/503/504とクライアントタイムアウトだけ次のendpointを1回試します。`OverpassError`はkind、endpoint、HTTP statusを保持し、400、混雑、タイムアウト、fetch拒否（ブラウザではCORSと一般ネットワークを判別不能）、不正JSON、その他HTTPを内部で区別します。
+Overpass endpointは `src/config/appConfig.ts` の優先順リストで管理します。要求は`URLSearchParams`をbodyにしたPOSTで送り、ブラウザにCORS-safeなContent-Type設定を委ねます。HTTP 429/502/503/504、クライアントタイムアウト、またはfetch拒否時に次のendpointを1回試します。ブラウザはCORS・DNS・TLS・一般ネットワークの拒否を区別して公開しないため、fetch拒否はendpoint固有の失敗としてフォールバック対象にします。`OverpassError`はkind、endpoint、HTTP statusを保持し、400、混雑、タイムアウト、fetch拒否、不正JSON、その他HTTPを内部で区別します。
 
 Phase 3のOSM認証・書き込みは検索境界へ混ぜず、独立したサービスとして追加します。現在地および検索結果の永続化は禁止です。

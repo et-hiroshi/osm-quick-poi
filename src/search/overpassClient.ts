@@ -164,7 +164,12 @@ export function overpassErrorMessage(error: unknown): string {
 function isFallbackEligible(error: unknown): boolean {
   return (
     error instanceof OverpassError &&
-    (error.kind === 'busy' || error.kind === 'timeout')
+    // Browsers intentionally expose CORS, DNS, TLS, and offline failures as
+    // the same fetch rejection.  An endpoint-specific CORS or network issue
+    // must therefore be allowed to advance to the next public endpoint.
+    (error.kind === 'busy' ||
+      error.kind === 'timeout' ||
+      error.kind === 'network')
   );
 }
 

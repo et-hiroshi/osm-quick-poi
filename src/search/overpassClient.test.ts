@@ -168,15 +168,36 @@ describe('Overpass convenience search', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it('classifies a CORS-like fetch rejection as network and does not fallback', async () => {
+  it('tries the next endpoint after a CORS-like fetch rejection', async () => {
+    const fetcher = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Load failed'))
+      .mockResolvedValueOnce(jsonResponse({ elements: [] })) as Fetcher;
+    const client = new OverpassClient(endpoints, 1_000, fetcher);
+    await expect(
+      client.search(center, 50, new AbortController().signal),
+    ).resolves.toEqual([]);
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      endpoints[0],
+      expect.any(Object),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      endpoints[1],
+      expect.any(Object),
+    );
+  });
+
+  it('reports a network failure from the final endpoint', async () => {
     const fetcher = vi.fn(async () => {
       throw new TypeError('Load failed');
     }) as Fetcher;
     const client = new OverpassClient(endpoints, 1_000, fetcher);
     await expect(
       client.search(center, 50, new AbortController().signal),
-    ).rejects.toMatchObject({ kind: 'network', endpoint: endpoints[0] });
-    expect(fetcher).toHaveBeenCalledOnce();
+    ).rejects.toMatchObject({ kind: 'network', endpoint: endpoints[1] });
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
   it('classifies invalid JSON without fallback', async () => {
