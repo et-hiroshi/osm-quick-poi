@@ -1,12 +1,18 @@
 import type { AppStore } from '../app/appState';
 import type { AuthController } from '../auth/authController';
 import type { ConveniencePoi, SearchStatus } from '../types/convenience';
+import { RegistrationSafety } from './registrationSafety';
 import {
   CONVENIENCE_BRANDS,
   convenienceTags,
   type ConvenienceBrand,
 } from '../write/convenienceTags';
-import { OsmWriteClient, OsmWriteError } from '../write/osmWriteClient';
+import {
+  OsmWriteClient,
+  OsmWriteError,
+  OsmWriteUnknownResultError,
+  type UnknownNodeCreation,
+} from '../write/osmWriteClient';
 
 const SHORT_LABELS: Record<ConvenienceBrand, string> = {
   'seven-eleven': 'セブン',
@@ -39,7 +45,15 @@ export function mountRegistrationPanel(
     <div class="brand-buttons">
       ${CONVENIENCE_BRANDS.map(({ value }) => `<button type="button" data-brand="${value}">${SHORT_LABELS[value]}</button>`).join('')}
     </div>
-    <p id="registration-message" class="registration-message" role="status" aria-live="assertive">ログイン後に登録できます。</p>`;
+    <p id="registration-message" class="registration-message" role="status" aria-live="assertive">ログイン後に登録できます。</p>
+    <div id="registration-complete" class="registration-complete" hidden>
+      <strong id="registration-complete-title"></strong>
+      <p id="registration-complete-detail"></p>
+      <div class="registration-complete-actions">
+        <a id="open-created-node" target="_blank" rel="noopener noreferrer">OSMで開く</a>
+        <button id="start-another-registration" type="button">別の店舗を登録</button>
+      </div>
+    </div>`;
 
   const overlay = document.createElement('div');
   overlay.className = 'confirmation-overlay';
@@ -64,6 +78,23 @@ export function mountRegistrationPanel(
     panel.querySelectorAll<HTMLButtonElement>('[data-brand]'),
   );
   const panelMessage = required<HTMLElement>(panel, '#registration-message');
+  const complete = required<HTMLElement>(panel, '#registration-complete');
+  const completeTitle = required<HTMLElement>(
+    panel,
+    '#registration-complete-title',
+  );
+  const completeDetail = required<HTMLElement>(
+    panel,
+    '#registration-complete-detail',
+  );
+  const createdNodeLink = required<HTMLAnchorElement>(
+    panel,
+    '#open-created-node',
+  );
+  const anotherButton = required<HTMLButtonElement>(
+    panel,
+    '#start-another-registration',
+  );
   const selectedBrand = required<HTMLElement>(overlay, '#selected-brand');
   const nameInput = required<HTMLInputElement>(overlay, '#store-name');
   const nameRequirement = required<HTMLElement>(
@@ -87,14 +118,53 @@ export function mountRegistrationPanel(
   let submitting = false;
   let activeBrand: ConvenienceBrand | null = null;
   let opener: HTMLButtonElement | null = null;
+  let createdNodeId: number | null = null;
+  let unknownNodeCreation: UnknownNodeCreation | null = null;
+  const registrationSafety = new RegistrationSafety();
 
   const renderControls = () => {
     brandButtons.forEach((button) => {
-      button.disabled = !authenticated || submitting;
+      button.disabled =
+        !authenticated || submitting || registrationSafety.isLocked();
     });
     confirmButton.disabled = submitting;
     confirmButton.setAttribute('aria-busy', String(submitting));
     cancelButton.disabled = submitting;
+  };
+
+  const unlockRegistration = () => {
+    registrationSafety.unlock();
+    complete.hidden = true;
+    panelMessage.hidden = false;
+    renderControls();
+  };
+
+  const showSuccessfulRegistration = (nodeId: number) => {
+    createdNodeId = nodeId;
+    unknownNodeCreation = null;
+    completeTitle.textContent = '登録しました';
+    completeDetail.textContent = `node ${createdNodeId}`;
+    createdNodeLink.href = `https://www.openstreetmap.org/node/${createdNodeId}`;
+    createdNodeLink.textContent = 'OSMで開く';
+    createdNodeLink.hidden = false;
+    anotherButton.hidden = false;
+    panelMessage.hidden = true;
+    complete.hidden = false;
+    renderControls();
+  };
+
+  const showUnknownRegistration = (error: OsmWriteUnknownResultError) => {
+    createdNodeId = null;
+    unknownNodeCreation = error.attemptedNode;
+    completeTitle.textContent = '登録結果を確認できません';
+    completeDetail.textContent = `changeset ${unknownNodeCreation.changesetId}、緯度 ${unknownNodeCreation.coordinates.latitude}、経度 ${unknownNodeCreation.coordinates.longitude}。重複を避けるため再送しないでください。`;
+    createdNodeLink.href = `https://www.openstreetmap.org/changeset/${unknownNodeCreation.changesetId}`;
+    createdNodeLink.textContent = 'OSMでchangesetを確認';
+    createdNodeLink.hidden = false;
+    anotherButton.hidden = true;
+    panelMessage.hidden = true;
+    complete.hidden = false;
+    renderControls();
   };
 
   const renderWarning = () => {
@@ -154,9 +224,13 @@ export function mountRegistrationPanel(
       panelMessage.dataset.status = 'authenticated';
     }
   });
-  store.subscribe(() => {
+  store.subscribe((state) => {
+    if (registrationSafety.unlockIfCenterMoved(state.center)) {
+      unlockRegistration();
+    }
     if (!overlay.hidden) renderWarning();
   });
+  anotherButton.addEventListener('click', unlockRegistration);
   brandButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const brand = button.dataset.brand as ConvenienceBrand;
@@ -190,21 +264,29 @@ export function mountRegistrationPanel(
     // The coordinate snapshot is intentionally taken at the moment submission starts.
     const coordinates = { ...store.getState().center };
     const brand = activeBrand;
+    const tags = convenienceTags(brand, storeName);
+    const submissionKey = JSON.stringify({ coordinates, tags });
+    if (!registrationSafety.canSubmit(submissionKey)) {
+      confirmationMessage.textContent =
+        'この登録は送信済みか結果不明です。重複を避けるため再送できません。';
+      confirmationMessage.dataset.status = 'error';
+      return;
+    }
     submitting = true;
     renderControls();
     confirmationMessage.textContent = 'OSMへ登録中…';
     confirmationMessage.dataset.status = 'submitting';
     try {
-      const result = await client.createConvenience(
-        token,
-        coordinates,
-        convenienceTags(brand, storeName),
-      );
+      const result = await client.createConvenience(token, coordinates, tags);
+      registrationSafety.lock(coordinates, submissionKey);
       closeConfirmation();
-      panelMessage.textContent = `登録しました（node ${result.nodeId}）。`;
-      panelMessage.dataset.status = 'success';
+      showSuccessfulRegistration(result.nodeId);
     } catch (error) {
-      if (error instanceof OsmWriteError && error.status === 401) {
+      if (error instanceof OsmWriteUnknownResultError) {
+        registrationSafety.lock(coordinates, submissionKey);
+        closeConfirmation();
+        showUnknownRegistration(error);
+      } else if (error instanceof OsmWriteError && error.status === 401) {
         await auth.handleUnauthorized();
         confirmationMessage.textContent = 'OSMへ再度ログインしてください。';
       } else {

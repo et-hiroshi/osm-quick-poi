@@ -6,12 +6,30 @@ export class OsmWriteError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    readonly outcome: 'failed' | 'unknown' = 'failed',
   ) {
     super(message);
   }
 }
 
+export interface UnknownNodeCreation {
+  changesetId: number;
+  coordinates: Coordinates;
+  tags: Readonly<Record<string, string>>;
+}
+
+export class OsmWriteUnknownResultError extends OsmWriteError {
+  constructor(readonly attemptedNode: UnknownNodeCreation) {
+    super(
+      `nodeの作成結果を確認できませんでした（changeset ${attemptedNode.changesetId}）。重複登録を避けるため再送しないでください。`,
+      undefined,
+      'unknown',
+    );
+  }
+}
+
 export interface CreatedConvenience {
+  outcome: 'success';
   changesetId: number;
   nodeId: number;
 }
@@ -32,13 +50,19 @@ export class OsmWriteClient {
     let failure: unknown;
     try {
       changesetId = await this.createChangeset(token);
-      const nodeId = await this.createNode(
-        token,
-        changesetId,
-        coordinates,
-        tags,
-      );
-      result = { changesetId, nodeId };
+      let nodeId: number;
+      try {
+        nodeId = await this.createNode(token, changesetId, coordinates, tags);
+      } catch (error) {
+        if (error instanceof OsmWriteError && error.status !== undefined)
+          throw error;
+        throw new OsmWriteUnknownResultError({
+          changesetId,
+          coordinates: { ...coordinates },
+          tags: { ...tags },
+        });
+      }
+      result = { outcome: 'success', changesetId, nodeId };
     } catch (error) {
       failure = error;
     }

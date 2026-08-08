@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { OsmWriteClient } from './osmWriteClient';
+import { OsmWriteClient, OsmWriteUnknownResultError } from './osmWriteClient';
 
 const coordinates = { latitude: 35.1234567, longitude: 139.7654321 };
 
@@ -17,7 +17,7 @@ describe('OsmWriteClient', () => {
         shop: 'convenience',
         name: 'A&B',
       }),
-    ).resolves.toEqual({ changesetId: 123, nodeId: 456 });
+    ).resolves.toEqual({ outcome: 'success', changesetId: 123, nodeId: 456 });
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
@@ -89,5 +89,51 @@ describe('OsmWriteClient', () => {
         message: expect.stringContaining('再送しないでください'),
       }),
     );
+  });
+
+  it('node作成要求後の通信断を結果不明として保持し再送を止める', async () => {
+    const tags = { shop: 'convenience', name: '通信断テスト店' };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('123', { status: 200 }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    const error = await new OsmWriteClient(
+      fetchMock,
+      'https://api.test/api/0.6',
+    )
+      .createConvenience('token', coordinates, tags)
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(OsmWriteUnknownResultError);
+    expect(error).toMatchObject({
+      outcome: 'unknown',
+      attemptedNode: {
+        changesetId: 123,
+        coordinates,
+        tags,
+      },
+      message: expect.stringContaining('再送しないでください'),
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(String(fetchMock.mock.calls[2][0])).toContain(
+      '/changeset/123/close',
+    );
+  });
+
+  it('node作成のHTTPエラーは確定失敗として返す', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('123', { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 409 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await expect(
+      new OsmWriteClient(
+        fetchMock,
+        'https://api.test/api/0.6',
+      ).createConvenience('token', coordinates, { shop: 'convenience' }),
+    ).rejects.toMatchObject({ outcome: 'failed', status: 409 });
   });
 });

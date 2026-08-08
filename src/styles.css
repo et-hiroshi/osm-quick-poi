@@ -233,6 +233,33 @@ input:focus-visible {
 .registration-message[data-status='expired'] {
   color: #8a251c;
 }
+.registration-complete {
+  margin-top: 7px;
+  padding: 9px 10px;
+  border: 1px solid rgb(15 77 58 / 28%);
+  border-radius: 9px;
+  background: #eef5f0;
+  font-size: 0.76rem;
+}
+.registration-complete > p {
+  margin: 3px 0 7px;
+}
+.registration-complete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.registration-complete-actions a,
+.registration-complete-actions button {
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid #0f4d3a;
+  border-radius: 8px;
+  color: #0f4d3a;
+  background: white;
+  font-weight: 750;
+  text-decoration: none;
+}
 
 .confirmation-overlay {
   position: absolute;
