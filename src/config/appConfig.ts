@@ -20,6 +20,8 @@ export const APP_CONFIG = {
     debounceMilliseconds: 900,
     timeoutMilliseconds: 12_000,
   },
+  // Public OAuth client: PKCE is used and no client secret is shipped.
+  osmOAuthClientId: 'DNHlSu1DURzGA_dmO-cdLUI9jSCqCJ8EOBxaqBg4tL0',
 } as const;
 
 export const ACCURACY_VISUAL_CONFIG = {

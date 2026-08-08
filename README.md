@@ -1,6 +1,6 @@
 # OSM Quick POI
 
-外出先で、OpenStreetMapへ登録するPOIの位置を素早く正確に決めるためのiPhone向けPWAです。現在は **Phase 2** まで実装し、地図中央の登録予定位置周辺に既存のコンビニがないか確認できます。
+外出先で、OpenStreetMapへ登録するPOIの位置を素早く正確に決めるためのiPhone向けPWAです。現在は **Phase 3-1** まで実装し、地図中央の登録予定位置周辺に既存のコンビニがないか確認し、OSMアカウントでログインできます。
 
 ## 技術構成
 
@@ -24,6 +24,14 @@ npm test
 npm run build
 npm run preview
 ```
+
+## OSM OAuth設定（Phase 3-1）
+
+OSMのOAuth 2アプリケーションを「Confidential application」を無効にして登録し、Redirect URIへローカルURL（例：`http://127.0.0.1:5173/`）と公開URL（`https://et-hiroshi.github.io/osm-quick-poi/`）を登録します。書き込み権限は選択せず、`read_prefs`だけを許可してください。
+
+client IDは公開クライアントのアプリ設定としてソースコードで管理します。client secretはこのSPAでは使用せず、リポジトリやGitHub Pagesへ保存しないでください。
+
+認証はAuthorization Code + PKCE（S256）を使用します。アクセストークンはWeb Storageへ置かず、同一オリジンのIndexedDBへ永続保存します。ログアウト、既知の期限到来、またはユーザー情報APIの401応答時に削除します。このPhaseでは`write_api`を要求せず、OSMへの書き込みAPIも呼び出しません。
 
 ## GitHub Pages
 
@@ -50,7 +58,7 @@ Safariで公開URLを開き、共有ボタンから「ホーム画面に追加�
 ## 現在の制限
 
 - オフライン地図には対応しません。Service WorkerはOSMタイルをキャッシュしません。
-- OSMログイン・書き込み、コンビニ登録、その他のPOI、履歴・下書きは未実装です。
+- OSMへの書き込み、コンビニ登録、その他のPOI、履歴・下書きは未実装です。
 - iPhone実機でのSafari/PWA動作は、実際の端末で別途確認が必要です。
 
 実機確認では、位置情報の許可・拒否・再試行、地図操作後の検索、複数結果のスクロール、マーカー選択、検索エラーからの再試行、Safe Area、ホーム画面起動を確認してください。

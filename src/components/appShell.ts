@@ -3,6 +3,7 @@ import { conveniencePoiKey } from '../types/convenience';
 import { formatAccuracy, formatCoordinates } from './formatters';
 
 export interface AppElements {
+  appShell: HTMLElement;
   map: HTMLElement;
   locateButton: HTMLButtonElement;
   systemMessage: HTMLElement;
@@ -50,6 +51,7 @@ export function createAppShell(
     </section>`;
 
   const map = requiredElement<HTMLElement>(root, '#map');
+  const appShell = requiredElement<HTMLElement>(root, '.app-shell');
   const locateButton = requiredElement<HTMLButtonElement>(
     root,
     '#locate-button',
@@ -83,6 +85,7 @@ export function createAppShell(
     ),
   );
   return {
+    appShell,
     map,
     locateButton,
     systemMessage,

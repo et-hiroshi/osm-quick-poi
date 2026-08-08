@@ -1,8 +1,12 @@
 import './styles.css';
+import { AuthController } from './auth/authController';
+import { IndexedDbTokenStorage } from './auth/indexedDbTokenStorage';
+import { OsmAuthClient } from './auth/osmAuthClient';
 import { AppStore } from './app/appState';
 import { applyLocationReading } from './app/applyLocationReading';
 import { APP_CONFIG } from './config/appConfig';
 import { createAppShell } from './components/appShell';
+import { mountAuthPanel } from './components/authPanel';
 import {
   getCurrentLocation,
   locationErrorMessage,
@@ -31,6 +35,22 @@ const store = new AppStore({
   },
 });
 const elements = createAppShell(root, store);
+const authController = new AuthController(
+  new OsmAuthClient(
+    APP_CONFIG.osmOAuthClientId,
+    sessionStorage,
+    crypto,
+    globalThis.fetch.bind(globalThis),
+  ),
+  new IndexedDbTokenStorage(),
+  (url) => location.assign(url),
+);
+mountAuthPanel(
+  elements.appShell,
+  authController,
+  () => `${location.origin}${location.pathname}`,
+);
+void authController.initialize(new URL(location.href));
 let tileErrorShown = false;
 let searchController: SearchController | null = null;
 

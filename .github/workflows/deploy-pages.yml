@@ -13,7 +13,7 @@ permissions:
 concurrency:
   # Keep one deployment at a time, but let an already-started production
   # deployment finish. This matches GitHub's Pages starter workflow.
-  group: "pages"
+  group: 'pages'
   cancel-in-progress: false
 
 jobs:

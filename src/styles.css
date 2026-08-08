@@ -37,6 +37,54 @@ button {
   min-height: 0;
   overflow: hidden;
 }
+.auth-panel {
+  position: absolute;
+  z-index: 900;
+  top: max(10px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 46px;
+  padding: 6px 7px 6px 12px;
+  border: 1px solid rgb(15 77 58 / 20%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
+}
+.auth-message {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.auth-message[data-status='error'],
+.auth-message[data-status='expired'] {
+  color: #8a251c;
+}
+.auth-button {
+  flex: none;
+  min-height: 36px;
+  padding: 5px 12px;
+  border: 1px solid #0f4d3a;
+  border-radius: 18px;
+  color: white;
+  background: #0f4d3a;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.auth-button:disabled {
+  opacity: 0.65;
+}
+.auth-button:focus-visible {
+  outline: 3px solid #f4b942;
+  outline-offset: 2px;
+}
 #map {
   width: 100%;
   height: 100%;
@@ -112,7 +160,7 @@ button {
   font-weight: 650;
 }
 .system-message {
-  top: 42px;
+  top: 66px;
   right: 12px;
   color: #702018;
 }

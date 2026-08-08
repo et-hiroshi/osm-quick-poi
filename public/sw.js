@@ -1,4 +1,4 @@
-const CACHE_NAME = 'osm-quick-poi-shell-v1';
+const CACHE_NAME = 'osm-quick-poi-shell-v2';
 const APP_SHELL = [
   './',
   './manifest.webmanifest',
