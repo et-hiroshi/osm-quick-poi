@@ -109,6 +109,19 @@ describe('Overpass convenience search', () => {
     );
   });
 
+  it('calls a browser fetch implementation with the global receiver', async () => {
+    const fetcher = vi.fn(function (this: typeof globalThis) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation');
+      return Promise.resolve(jsonResponse({ elements: [] }));
+    }) as Fetcher;
+    const client = new OverpassClient(endpoints, 1_000, fetcher);
+
+    await expect(
+      client.search(center, 50, new AbortController().signal),
+    ).resolves.toEqual([]);
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
   it('classifies HTTP 400 as a bad request without fallback', async () => {
     const fetcher = vi.fn(async () => jsonResponse({}, 400)) as Fetcher;
     const client = new OverpassClient(endpoints, 1_000, fetcher);

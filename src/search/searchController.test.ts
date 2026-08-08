@@ -186,4 +186,35 @@ describe('SearchController', () => {
       message: '半径50m以内にコンビニ登録なし',
     });
   });
+
+  it('starts a new search immediately when retrying an error', async () => {
+    const store = createStore();
+    store.update({
+      convenienceSearch: {
+        ...store.getState().convenienceSearch,
+        status: 'error',
+        message: '検索サービスへ接続できません',
+      },
+    });
+    const service: ConvenienceSearchService = { search: vi.fn(async () => []) };
+    const controller = new SearchController(
+      store,
+      service,
+      50,
+      900,
+      () => 'error',
+      vi.fn(),
+    );
+
+    controller.retry();
+    expect(store.getState().convenienceSearch.status).toBe('loading');
+    expect(service.search).toHaveBeenCalledWith(
+      initialCenter,
+      50,
+      expect.any(AbortSignal),
+    );
+    await vi.waitFor(() =>
+      expect(store.getState().convenienceSearch.status).toBe('success'),
+    );
+  });
 });

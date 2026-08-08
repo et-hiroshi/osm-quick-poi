@@ -93,7 +93,7 @@ export class OverpassClient implements ConvenienceSearchService {
     }, this.timeoutMilliseconds);
 
     try {
-      const response = await this.fetcher(endpoint, {
+      const response = await this.fetcher.call(globalThis, endpoint, {
         method: 'POST',
         body: new URLSearchParams({
           data: buildConvenienceQuery(center, radiusMeters),
