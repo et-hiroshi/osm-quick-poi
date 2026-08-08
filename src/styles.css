@@ -1,5 +1,5 @@
 :root {
-  --detail-panel-height: 250px;
+  --detail-panel-height: min(46dvh, 430px);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: #17211c;
   background: #f2f5f1;
@@ -193,7 +193,7 @@ button {
 
 .coordinate-panel {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto;
   height: var(--detail-panel-height);
   min-height: 0;
   padding: 12px max(16px, env(safe-area-inset-right))
@@ -201,7 +201,8 @@ button {
     max(16px, env(safe-area-inset-left));
   border-top: 1px solid #c8d0ca;
   background: #f8faf7;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .coordinate-heading {
   display: flex;
@@ -280,9 +281,76 @@ button {
   min-height: 0;
   padding: 0;
   margin: 7px 0 0;
+  max-height: 120px;
   overflow-y: auto;
   overscroll-behavior: contain;
   list-style: none;
+}
+.registration-panel {
+  position: absolute;
+  z-index: 700;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(var(--detail-panel-height) + 12px);
+  left: max(16px, env(safe-area-inset-left));
+  padding: 10px 12px;
+  border: 1px solid rgb(15 77 58 / 20%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
+}
+.registration-panel h2 {
+  margin: 0 0 7px;
+  color: #244538;
+  font-size: 0.84rem;
+}
+.registration-controls {
+  display: flex;
+  align-items: end;
+  gap: 7px;
+}
+.registration-controls label {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  color: #526058;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.registration-controls select,
+.registration-controls input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #9eaaa3;
+  border-radius: 8px;
+  background: white;
+  font-size: 0.82rem;
+}
+.registration-controls button {
+  flex: none;
+  min-height: 40px;
+  padding: 5px 12px;
+  border: 1px solid #0f4d3a;
+  border-radius: 20px;
+  color: white;
+  background: #0f4d3a;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.registration-controls button:disabled {
+  opacity: 0.55;
+}
+.registration-message {
+  min-height: 1.2em;
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.registration-message[data-status='success'] {
+  color: #0f4d3a;
+}
+.registration-message[data-status='error'],
+.registration-message[data-status='expired'] {
+  color: #8a251c;
 }
 .search-result {
   display: grid;
@@ -369,6 +437,12 @@ button {
   .locate-button {
     min-width: 96px;
     padding: 0 12px;
+  }
+  .registration-controls {
+    flex-wrap: wrap;
+  }
+  .registration-controls button {
+    width: 100%;
   }
 }
 

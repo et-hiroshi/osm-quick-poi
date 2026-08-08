@@ -93,8 +93,9 @@ describe('AuthController', () => {
     expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe(
       'S256',
     );
-    expect(authorizationUrl.searchParams.get('scope')).toBe('read_prefs');
-    expect(authorizationUrl.searchParams.get('scope')).not.toContain('write');
+    expect(authorizationUrl.searchParams.get('scope')).toBe(
+      'read_prefs write_api',
+    );
 
     const callback = new URL(redirectUri);
     callback.searchParams.set('code', 'authorization-code');
@@ -109,6 +110,7 @@ describe('AuthController', () => {
       status: 'authenticated',
       displayName: 'mapper',
     });
+    expect(harness.controller.getAccessToken()).toBe('new-token');
     const tokenRequest = fetchMock.mock.calls[0][1];
     expect(String(tokenRequest?.body)).toContain('code_verifier=');
   });

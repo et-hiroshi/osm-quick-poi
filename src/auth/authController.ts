@@ -4,6 +4,7 @@ import { AuthRequestError, OsmAuthClient } from './osmAuthClient';
 type Listener = (state: Readonly<AuthState>) => void;
 
 export class AuthController {
+  private token: StoredToken | null = null;
   private state: AuthState = {
     status: 'loading',
     displayName: null,
@@ -97,12 +98,24 @@ export class AuthController {
 
   async logout(): Promise<void> {
     await this.storage.clear();
+    this.token = null;
     this.updateAnonymous('OSMからログアウトしました。');
+  }
+
+  getAccessToken(): string | null {
+    return this.state.status === 'authenticated'
+      ? (this.token?.accessToken ?? null)
+      : null;
+  }
+
+  async handleUnauthorized(): Promise<void> {
+    await this.expire();
   }
 
   private async loadUser(token: StoredToken): Promise<void> {
     try {
       const displayName = await this.client.fetchDisplayName(token.accessToken);
+      this.token = token;
       this.update({
         status: 'authenticated',
         displayName,
@@ -123,6 +136,7 @@ export class AuthController {
 
   private async expire(): Promise<void> {
     await this.storage.clear();
+    this.token = null;
     this.update({
       status: 'expired',
       displayName: null,

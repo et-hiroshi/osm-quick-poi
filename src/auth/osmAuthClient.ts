@@ -50,7 +50,7 @@ export class OsmAuthClient {
       client_id: this.clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'read_prefs',
+      scope: 'read_prefs write_api',
       state,
       code_challenge: challenge,
       code_challenge_method: 'S256',

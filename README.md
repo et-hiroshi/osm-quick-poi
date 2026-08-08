@@ -1,6 +1,6 @@
 # OSM Quick POI
 
-外出先で、OpenStreetMapへ登録するPOIの位置を素早く正確に決めるためのiPhone向けPWAです。現在は **Phase 3-1** まで実装し、地図中央の登録予定位置周辺に既存のコンビニがないか確認し、OSMアカウントでログインできます。
+外出先で、OpenStreetMapへ登録するPOIの位置を素早く正確に決めるためのiPhone向けPWAです。現在は **Phase 3-2** まで実装し、地図中央の登録予定位置周辺に既存のコンビニがないか確認して、OSMへ新しいコンビニnodeを登録できます。
 
 ## 技術構成
 
@@ -25,13 +25,19 @@ npm run build
 npm run preview
 ```
 
-## OSM OAuth設定（Phase 3-1）
+## OSM OAuth設定（Phase 3）
 
-OSMのOAuth 2アプリケーションを「Confidential application」を無効にして登録し、Redirect URIへローカルURL（例：`http://127.0.0.1:5173/`）と公開URL（`https://et-hiroshi.github.io/osm-quick-poi/`）を登録します。書き込み権限は選択せず、`read_prefs`だけを許可してください。
+OSMのOAuth 2アプリケーションを「Confidential application」を無効にして登録し、Redirect URIへローカルURL（例：`http://127.0.0.1:5173/`）と公開URL（`https://et-hiroshi.github.io/osm-quick-poi/`）を登録します。OAuthアプリには `read_prefs` と `write_api` を許可してください。既にPhase 3-1でログイン済みの場合は、書き込み権限を反映するため一度ログアウトして再ログインします。
 
 client IDは公開クライアントのアプリ設定としてソースコードで管理します。client secretはこのSPAでは使用せず、リポジトリやGitHub Pagesへ保存しないでください。
 
-認証はAuthorization Code + PKCE（S256）を使用します。アクセストークンはWeb Storageへ置かず、同一オリジンのIndexedDBへ永続保存します。ログアウト、既知の期限到来、またはユーザー情報APIの401応答時に削除します。このPhaseでは`write_api`を要求せず、OSMへの書き込みAPIも呼び出しません。
+認証はAuthorization Code + PKCE（S256）を使用します。アクセストークンはWeb Storageへ置かず、同一オリジンのIndexedDBへ永続保存します。ログアウト、既知の期限到来、またはOSM APIの401応答時に削除します。
+
+## コンビニ登録（Phase 3-2）
+
+ブランドを選び「中央ピンへ登録」を押すと、その時点の地図中央座標を固定し、changeset作成、node作成、changeset終了の順にOSM Editing APIへ送信します。送信中はボタンを無効化します。セブン-イレブン、ファミリーマート、ローソン、ミニストップには日本向けName Suggestion Index準拠のタグを付け、「その他」では入力した店舗名と `shop=convenience` を付けます。
+
+登録操作は実際のOSMデータを即座に変更します。現地、航空写真、周辺検索結果を確認し、既存店舗との重複がない場合だけ実行してください。
 
 ## GitHub Pages
 
@@ -58,7 +64,7 @@ Safariで公開URLを開き、共有ボタンから「ホーム画面に追加�
 ## 現在の制限
 
 - オフライン地図には対応しません。Service WorkerはOSMタイルをキャッシュしません。
-- OSMへの書き込み、コンビニ登録、その他のPOI、履歴・下書きは未実装です。
+- コンビニ以外のPOI、既存要素の編集、履歴・下書きは未実装です。
 - iPhone実機でのSafari/PWA動作は、実際の端末で別途確認が必要です。
 
 実機確認では、位置情報の許可・拒否・再試行、地図操作後の検索、複数結果のスクロール、マーカー選択、検索エラーからの再試行、Safe Area、ホーム画面起動を確認してください。

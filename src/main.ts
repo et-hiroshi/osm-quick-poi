@@ -7,6 +7,7 @@ import { applyLocationReading } from './app/applyLocationReading';
 import { APP_CONFIG } from './config/appConfig';
 import { createAppShell } from './components/appShell';
 import { mountAuthPanel } from './components/authPanel';
+import { mountRegistrationPanel } from './components/registrationPanel';
 import {
   getCurrentLocation,
   locationErrorMessage,
@@ -16,6 +17,7 @@ import { MapView } from './map/mapView';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { OverpassClient, overpassErrorMessage } from './search/overpassClient';
 import { SearchController } from './search/searchController';
+import { OsmWriteClient } from './write/osmWriteClient';
 
 const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('App root is missing');
@@ -49,6 +51,12 @@ mountAuthPanel(
   elements.appShell,
   authController,
   () => `${location.origin}${location.pathname}`,
+);
+mountRegistrationPanel(
+  elements.appShell,
+  store,
+  authController,
+  new OsmWriteClient(globalThis.fetch.bind(globalThis)),
 );
 void authController.initialize(new URL(location.href));
 let tileErrorShown = false;
