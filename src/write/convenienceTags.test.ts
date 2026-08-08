@@ -26,4 +26,12 @@ describe('convenienceTags', () => {
       name: '個人商店',
     });
   });
+
+  it('既知ブランドは入力した店舗名を優先する', () => {
+    expect(convenienceTags('lawson', '  ローソン 博多駅前店  ')).toMatchObject({
+      brand: 'LAWSON',
+      name: 'ローソン 博多駅前店',
+      'name:ja': 'ローソン 博多駅前店',
+    });
+  });
 });

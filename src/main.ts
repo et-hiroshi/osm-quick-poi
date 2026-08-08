@@ -110,15 +110,6 @@ elements.locateButton.addEventListener(
   'click',
   () => void controller.request(),
 );
-elements.retrySearchButton.addEventListener('click', () =>
-  searchController?.retry(),
-);
-elements.searchResults.addEventListener('click', (event) => {
-  const target = event.target;
-  if (!(target instanceof Element)) return;
-  const button = target.closest<HTMLButtonElement>('[data-poi-key]');
-  if (button?.dataset.poiKey) map.selectConveniencePoi(button.dataset.poiKey);
-});
 searchController.schedule(store.getState().center);
 void controller.request(APP_CONFIG.locationZoom);
 void registerServiceWorker(() => {

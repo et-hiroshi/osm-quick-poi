@@ -59,11 +59,13 @@ const BRAND_TAGS: Record<
 
 export function convenienceTags(
   brand: ConvenienceBrand,
-  otherName: string,
+  storeName: string,
 ): Record<string, string> {
   if (brand === 'other') {
-    const name = otherName.trim();
+    const name = storeName.trim();
     return name ? { shop: 'convenience', name } : { shop: 'convenience' };
   }
-  return { shop: 'convenience', ...BRAND_TAGS[brand] };
+  const tags = { shop: 'convenience', ...BRAND_TAGS[brand] };
+  const name = storeName.trim();
+  return name ? { ...tags, name, 'name:ja': name } : tags;
 }
